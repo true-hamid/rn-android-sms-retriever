@@ -6,16 +6,16 @@ const { RnAndroidSmsRetriever } = NativeModules
 
 export default function App() {
   const [otp, setOtp] = useState("");
-  const [error, setError] = useState("");
 
-  const getOtp = () => {RnAndroidSmsRetriever?.startListeningForOtp(
-    (otp: string) => {
-      setOtp(otp);
-    },
-    (error: string) => {
-      setError(error);
-    } 
-  );}
+  const getOtp = async () => {
+    try {
+      const result = await RnAndroidSmsRetriever.getSms(6);
+      setOtp(result);
+    } catch (e){
+      console.error(e);
+    }
+  }
+
   useEffect(() => {
     getOtp();
   },[]);
@@ -23,8 +23,7 @@ export default function App() {
   return (
     <View style={{flex: 1}}>
       <Text style = { styles.sectionTitle}>SMS Retriever</Text>
-      { otp != "" ? <Text style = { styles.sectionDescription}>Hey man, the otp is {otp}</Text> : null}
-      { error != "" ? <Text style = { styles.sectionDescription}>error : {error}</Text> : null}
+      { otp != "" ? <Text style = { styles.sectionDescription}>Received {otp}</Text> : <Text style = { styles.sectionDescription}>Waiting for otp</Text>}
     </View>
   );
 }

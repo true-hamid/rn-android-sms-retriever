@@ -12,21 +12,24 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.facebook.react.bridge.ActivityEventListener
-import com.facebook.react.bridge.Callback
+import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.Promise
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
+import com.rnandroidsmsretriever.utils.ConsentError
+import com.rnandroidsmsretriever.utils.ConsentRequest
+import com.rnandroidsmsretriever.utils.OTPRequest
+import com.rnandroidsmsretriever.utils.SmsRequest
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-class RnAndroidSmsRetrieverModule internal constructor(private val reactContext: ReactApplicationContext) :
-  RnAndroidSmsRetrieverSpec(reactContext), ActivityEventListener {
+class RnAndroidSmsRetrieverModule internal constructor(
+  private val reactContext: ReactApplicationContext
+) : RnAndroidSmsRetrieverSpec(reactContext), ActivityEventListener {
 
-  private var onSuccessCallback: Callback? = null
-  private var onFailureCallback: Callback? = null
+  private lateinit var consentRequest: ConsentRequest
   private val SMS_CONSENT_REQUEST = 22071998
 
   override fun getName(): String {
@@ -57,19 +60,22 @@ class RnAndroidSmsRetrieverModule internal constructor(private val reactContext:
                 "SmsRetrieverModule",
                 "SMS Broadcast started"
               )
-            } catch (e: ActivityNotFoundException) {
-              // Handle the exception ...
-              Log.d(
-                "SmsRetrieverModule",
-                "Exception happened: ${e.localizedMessage}"
+            } catch (e: ActivityNotFoundException){
+              consentRequest.promise.reject(
+                e.localizedMessage,
+                ConsentError.ActivityNotFound.code,
+                Throwable(ConsentError.ActivityNotFound.code)
               )
-              onFailureCallback?.invoke(e.localizedMessage)
             }
           }
 
           CommonStatusCodes.TIMEOUT -> {
             // Time out occurred, handle the error.
-            onFailureCallback?.invoke("Timeout!")
+            consentRequest.promise.reject(
+              "Timeout, no message received!",
+              ConsentError.Timeout.code,
+              Throwable(ConsentError.Timeout.code)
+            )
           }
         }
       }
@@ -83,30 +89,39 @@ class RnAndroidSmsRetrieverModule internal constructor(private val reactContext:
     intent: Intent?
   ) {
     Log.d("SmsRetrieverModule", "OnActivityResult started")
-    try {
-      when (requestCode) {
-        SMS_CONSENT_REQUEST ->
-          if (resultCode == Activity.RESULT_OK && intent != null) {
-            Log.d("SmsRetrieverModule", "We got the result and it's OK")
-            // Get SMS message content
-            val message = intent.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE)
-            val p: Pattern = Pattern.compile("(\\d{6})")
-            val m: Matcher? = message?.let { p.matcher(it) }
-            m?.find()?.let {
-              if (it) {
-                Log.d("SmsRetrieverModule", "found a pattern matching!")
-                // We obtained the OTP
-                onSuccessCallback?.invoke(m.group(0) as String)
+    when (requestCode) {
+      SMS_CONSENT_REQUEST ->
+        if (resultCode == Activity.RESULT_OK && intent != null) {
+          Log.d("SmsRetrieverModule", "We got the result and it's OK")
+          // Get SMS message content
+          val message = intent.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE)
+          val requiredOtpLength = consentRequest.otpLength
+          val p: Pattern = Pattern.compile("(\\d{$requiredOtpLength})")
+          val m: Matcher? = message?.let { p.matcher(it) }
+          m?.find()?.let {
+            if (it) {
+              Log.d("SmsRetrieverModule", "found a pattern matching!")
+              // it's our message, extract the required data from it
+              when (consentRequest) {
+                is OTPRequest -> {
+                  consentRequest.promise.resolve(m.group(0) as String)
+                }
+
+                is SmsRequest -> {
+                  consentRequest.promise.resolve(message)
+                }
               }
             }
           }
-          else {
-            Log.d("SmsRetrieverModule", "Consent denied!")
-            onFailureCallback?.invoke("Consent denied by user")
-          }
-      }
-    } catch (t: Throwable) {
-      onFailureCallback?.invoke(t.localizedMessage)
+        }
+        else {
+          Log.d("SmsRetrieverModule", "Consent denied!")
+          consentRequest.promise.reject(
+            "Consent denied by user",
+            ConsentError.Denied.code,
+            Throwable(ConsentError.Denied.code),
+          )
+        }
     }
   }
 
@@ -116,11 +131,38 @@ class RnAndroidSmsRetrieverModule internal constructor(private val reactContext:
 
   @SuppressLint("UnspecifiedRegisterReceiverFlag")
   @ReactMethod
-  fun startListeningForOtp(onSuccess: Callback, onFailure: Callback) {
+  fun getOtp(otpLength: Int, promise: Promise) {
     Log.d("SmsRetrieverModule", "Initiated start listening")
-    // We firstly assign our callbacks
-    this.onSuccessCallback = onSuccess
-    this.onFailureCallback = onFailure
+    // We firstly assign our consent request
+    this.consentRequest = OTPRequest(
+      otpLength = otpLength,
+      promise = promise,
+    )
+    // Then initialize the UserConsent
+    val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      reactContext.registerReceiver(
+        smsVerificationReceiver,
+        intentFilter,
+        SmsRetriever.SEND_PERMISSION,
+        Handler(Looper.getMainLooper())
+      )
+      Log.d("SmsRetrieverModule", "Registered our Receiver!")
+    }
+    val client = SmsRetriever.getClient(reactContext)
+    client.startSmsUserConsent(null)
+    Log.d("SmsRetrieverModule", "Started our UserConsent")
+  }
+
+  @SuppressLint("UnspecifiedRegisterReceiverFlag")
+  @ReactMethod
+  fun getSms(otpLength: Int, promise: Promise) {
+    Log.d("SmsRetrieverModule", "Initiated start listening")
+    // We firstly assign our consent request
+    this.consentRequest = SmsRequest(
+      otpLength = otpLength,
+      promise = promise,
+    )
     // Then initialize the UserConsent
     val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

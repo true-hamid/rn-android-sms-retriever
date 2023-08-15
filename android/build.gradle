@@ -51,7 +51,6 @@ def supportsNamespace() {
 android {
   if (supportsNamespace()) {
     namespace "com.rnandroidsmsretriever"
-
     sourceSets {
       main {
         manifest.srcFile "src/main/AndroidManifestNew.xml"

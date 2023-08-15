@@ -5,5 +5,7 @@ import com.facebook.react.bridge.Callback
 
 abstract class RnAndroidSmsRetrieverSpec internal constructor(context: ReactApplicationContext) :
   NativeRnAndroidSmsRetrieverSpec(context) {
-  abstract fun startListeningForOtp(onSuccess: Callback, onFailure: Callback)
+  abstract fun getOtp(otpLength: Int, promise: Promise)
+
+  abstract fun getSms(otpLength: Int,promise: Promise)
 }
