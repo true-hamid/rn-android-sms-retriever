@@ -56,10 +56,6 @@ class RnAndroidSmsRetrieverModule internal constructor(
                 SMS_CONSENT_REQUEST,
                 null,
               )
-              Log.d(
-                "SmsRetrieverModule",
-                "SMS Broadcast started"
-              )
             } catch (e: ActivityNotFoundException){
               consentRequest.promise.reject(
                 e.localizedMessage,
@@ -88,11 +84,9 @@ class RnAndroidSmsRetrieverModule internal constructor(
     resultCode: Int,
     intent: Intent?
   ) {
-    Log.d("SmsRetrieverModule", "OnActivityResult started")
     when (requestCode) {
       SMS_CONSENT_REQUEST ->
         if (resultCode == Activity.RESULT_OK && intent != null) {
-          Log.d("SmsRetrieverModule", "We got the result and it's OK")
           // Get SMS message content
           val message = intent.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE)
           val requiredOtpLength = consentRequest.otpLength
@@ -100,7 +94,6 @@ class RnAndroidSmsRetrieverModule internal constructor(
           val m: Matcher? = message?.let { p.matcher(it) }
           m?.find()?.let {
             if (it) {
-              Log.d("SmsRetrieverModule", "found a pattern matching!")
               // it's our message, extract the required data from it
               when (consentRequest) {
                 is OTPRequest -> {
@@ -115,7 +108,6 @@ class RnAndroidSmsRetrieverModule internal constructor(
           }
         }
         else {
-          Log.d("SmsRetrieverModule", "Consent denied!")
           consentRequest.promise.reject(
             "Consent denied by user",
             ConsentError.Denied.code,
@@ -129,34 +121,19 @@ class RnAndroidSmsRetrieverModule internal constructor(
 
   }
 
-  @SuppressLint("UnspecifiedRegisterReceiverFlag")
   @ReactMethod
-  fun getOtp(otpLength: Int, promise: Promise) {
-    Log.d("SmsRetrieverModule", "Initiated start listening")
+  override fun getOtp(otpLength: Int, promise: Promise) {
     // We firstly assign our consent request
     this.consentRequest = OTPRequest(
       otpLength = otpLength,
       promise = promise,
     )
     // Then initialize the UserConsent
-    val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      reactContext.registerReceiver(
-        smsVerificationReceiver,
-        intentFilter,
-        SmsRetriever.SEND_PERMISSION,
-        Handler(Looper.getMainLooper())
-      )
-      Log.d("SmsRetrieverModule", "Registered our Receiver!")
-    }
-    val client = SmsRetriever.getClient(reactContext)
-    client.startSmsUserConsent(null)
-    Log.d("SmsRetrieverModule", "Started our UserConsent")
+    initializeConsent()
   }
 
-  @SuppressLint("UnspecifiedRegisterReceiverFlag")
   @ReactMethod
-  fun getSms(otpLength: Int, promise: Promise) {
+  override fun getSms(otpLength: Int, promise: Promise) {
     Log.d("SmsRetrieverModule", "Initiated start listening")
     // We firstly assign our consent request
     this.consentRequest = SmsRequest(
@@ -164,6 +141,11 @@ class RnAndroidSmsRetrieverModule internal constructor(
       promise = promise,
     )
     // Then initialize the UserConsent
+    initializeConsent()
+  }
+
+  @SuppressLint("UnspecifiedRegisterReceiverFlag")
+  fun initializeConsent() {
     val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       reactContext.registerReceiver(
@@ -172,11 +154,9 @@ class RnAndroidSmsRetrieverModule internal constructor(
         SmsRetriever.SEND_PERMISSION,
         Handler(Looper.getMainLooper())
       )
-      Log.d("SmsRetrieverModule", "Registered our Receiver!")
     }
     val client = SmsRetriever.getClient(reactContext)
     client.startSmsUserConsent(null)
-    Log.d("SmsRetrieverModule", "Started our UserConsent")
   }
 
   companion object {

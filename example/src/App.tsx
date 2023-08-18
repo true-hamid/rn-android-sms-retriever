@@ -2,28 +2,32 @@ import React from 'react';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { NativeModules } from 'react-native';
-const { RnAndroidSmsRetriever } = NativeModules
+const { RnAndroidSmsRetriever } = NativeModules;
 
 export default function App() {
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState('');
 
   const getOtp = async () => {
     try {
       const result = await RnAndroidSmsRetriever.getSms(6);
       setOtp(result);
-    } catch (e){
+    } catch (e) {
       console.error(e);
     }
-  }
+  };
 
   useEffect(() => {
     getOtp();
-  },[]);
+  }, []);
 
   return (
-    <View style={{flex: 1}}>
-      <Text style = { styles.sectionTitle}>SMS Retriever</Text>
-      { otp != "" ? <Text style = { styles.sectionDescription}>Received {otp}</Text> : <Text style = { styles.sectionDescription}>Waiting for otp</Text>}
+    <View style={{ flex: 1 }}>
+      <Text style={styles.sectionTitle}>SMS Retriever</Text>
+      {otp !== '' ? (
+        <Text style={styles.sectionDescription}>Received {otp}</Text>
+      ) : (
+        <Text style={styles.sectionDescription}>Waiting for otp</Text>
+      )}
     </View>
   );
 }
