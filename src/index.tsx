@@ -24,6 +24,10 @@ const RnAndroidSmsRetriever = RnAndroidSmsRetrieverModule
       }
     );
 
-export function multiply(a: number, b: number): Promise<number> {
-  return RnAndroidSmsRetriever.multiply(a, b);
+export async function getOtp(otpLength: number): Promise<number> {
+  return await RnAndroidSmsRetriever.getOtp(otpLength);
+}
+
+export async function getSms(otpLength: number): Promise<number> {
+  return await RnAndroidSmsRetriever.getSms(otpLength);
 }

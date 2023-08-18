@@ -1,11 +1,12 @@
 package com.rnandroidsmsretriever
 
+import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
-import com.facebook.react.bridge.Promise
 
 abstract class RnAndroidSmsRetrieverSpec internal constructor(context: ReactApplicationContext) :
-  ReactContextBaseJavaModule(context) {
+  ReactContextBaseJavaModule(context){
+    abstract fun getOtp(otpLength: Int, promise: Promise)
 
-  abstract fun multiply(a: Double, b: Double, promise: Promise)
-}
+    abstract fun getSms(otpLength: Int,promise: Promise)
+  }
