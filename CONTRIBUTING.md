@@ -22,31 +22,18 @@ To start the packager:
 yarn example start
 ```
 
-To run the example app on Android:
+To run the example app:
 
 ```sh
 yarn example android
 ```
 
-To run the example app on iOS:
-
-```sh
-yarn example ios
-```
-
 By default, the example is configured to build with the old architecture. To run the example with the new architecture, you can do the following:
 
-1. For Android, run:
+- Run:
 
    ```sh
    ORG_GRADLE_PROJECT_newArchEnabled=true yarn example android
-   ```
-
-2. For iOS, run:
-
-   ```sh
-   RCT_NEW_ARCH_ENABLED=1 yarn example pods
-   yarn example ios
    ```
 
 If you are building for a different architecture than your previous build, make sure to remove the build folders first. You can run the following command to cleanup all build folders:
@@ -81,8 +68,6 @@ Remember to add tests for your change if possible. Run the unit tests by:
 ```sh
 yarn test
 ```
-
-To edit the Objective-C or Swift files, open `example/ios/RnAndroidSmsRetrieverExample.xcworkspace` in XCode and find the source files at `Pods > Development Pods > rn-android-sms-retriever`.
 
 To edit the Java or Kotlin files, open `example/android` in Android studio and find the source files at `rn-android-sms-retriever` under `Android`.
 
@@ -128,7 +113,6 @@ The `package.json` file contains various scripts for common tasks:
 - `yarn test`: run unit tests with Jest.
 - `yarn example start`: start the Metro server for the example app.
 - `yarn example android`: run the example app on Android.
-- `yarn example ios`: run the example app on iOS.
 
 ### Sending a pull request
 
