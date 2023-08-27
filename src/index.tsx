@@ -1,4 +1,4 @@
-import { NativeModules, Platform } from 'react-native';
+import { NativeModules } from 'react-native';
 
 const LINKING_ERROR =
   `The package 'rn-android-sms-retriever' doesn't seem to be linked. Make sure: \n\n` +
@@ -23,6 +23,18 @@ const RnAndroidSmsRetriever = RnAndroidSmsRetrieverModule
       }
     );
 
-export function multiply(a: number, b: number): Promise<number> {
-  return RnAndroidSmsRetriever.multiply(a, b);
+export async function getOtp(otpLength: number): Promise<number> {
+  return await RnAndroidSmsRetriever.getOtp(otpLength);
+}
+
+export async function getSms(): Promise<number> {
+  return await RnAndroidSmsRetriever.getSms();
+}
+
+export enum SMSRetrieverErrors {
+  ACTIVITY_NOT_FOUND = 'ACTIVITY_NOT_FOUND',
+  CONSENT_TIMEOUT = 'CONSENT_TIMEOUT',
+  CONSENT_DENIED = 'CONSENT_DENIED',
+  RECEIVER_EXCEPTION = 'RECEIVER_EXCEPTION',
+  REGEX_MISMATCH = 'REGEX_MISMATCH',
 }
