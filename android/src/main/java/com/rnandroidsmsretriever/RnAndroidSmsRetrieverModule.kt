@@ -57,7 +57,7 @@ class RnAndroidSmsRetrieverModule internal constructor(
                 null,
               )
             } catch (e: ActivityNotFoundException) {
-              consentRequest.promise.reject(
+              onError(
                 e.localizedMessage,
                 ConsentError.ActivityNotFound.code,
                 Throwable(ConsentError.ActivityNotFound.code)
@@ -67,7 +67,7 @@ class RnAndroidSmsRetrieverModule internal constructor(
 
           CommonStatusCodes.TIMEOUT -> {
             // Time out occurred, handle the error.
-            consentRequest.promise.reject(
+            onError(
               "Timeout, no message received!",
               ConsentError.Timeout.code,
               Throwable(ConsentError.Timeout.code)
@@ -96,10 +96,10 @@ class RnAndroidSmsRetrieverModule internal constructor(
                 Logger.debug(TAG, "onActivityResult_match: $m")
 
                 consentRequest.promise.resolve(m.group(0) as String)
-
+                reactContext.unregisterReceiver(smsVerificationReceiver)
               } else {
                 Logger.debug(TAG, "onActivityResult_no_match: $m")
-                consentRequest.promise.reject(
+                onError(
                   "The message received doesn't include the otp length requested",
                   ConsentError.RegexMismatch.code,
                   Throwable(ConsentError.RegexMismatch.code),
@@ -111,12 +111,13 @@ class RnAndroidSmsRetrieverModule internal constructor(
           is SmsRequest -> {
             Logger.debug(TAG, "onActivityResult_SmsRequest: $message")
             consentRequest.promise.resolve(message)
+            reactContext.unregisterReceiver(smsVerificationReceiver)
           }
         }
       } else {
         Logger.debug(TAG, "onActivityResult_match: kkk")
 
-        consentRequest.promise.reject(
+        onError(
           "Consent denied by user",
           ConsentError.Denied.code,
           Throwable(ConsentError.Denied.code),
@@ -151,18 +152,36 @@ class RnAndroidSmsRetrieverModule internal constructor(
     initializeConsent()
   }
 
+  private fun onSuccess(response: String) {
+    consentRequest.promise.resolve(response)
+    unregisterReceiver()
+  }
+
+  private fun onError(var1: String, var2: String, var3: Throwable) {
+    consentRequest.promise.reject(var1, var2, var3)
+    unregisterReceiver()
+  }
+
   private fun initializeConsent() {
+    registerReceiver()
+    val client = SmsRetriever.getClient(reactContext)
+    client.startSmsUserConsent(null)
+  }
+
+  @SuppressLint("UnspecifiedRegisterReceiverFlag")
+  fun registerReceiver() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       try {
-        reactContext.unregisterReceiver(smsVerificationReceiver)
-        Logger.debug(TAG, "initializeConsent_unregisterReceiver")
-        registerReceiver()
-      } catch (e: IllegalArgumentException) {
+        val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
+        reactContext.registerReceiver(
+          smsVerificationReceiver,
+          intentFilter,
+          SmsRetriever.SEND_PERMISSION,
+          Handler(Looper.getMainLooper())
+        )
+      } catch (e: Exception) {
         var msg = e.message
-        if (msg!!.contains("Receiver not registered", ignoreCase = true)) {
-          Logger.debug(TAG, "initializeConsent_exception_handled: $msg")
-          registerReceiver()
-        } else {
+        if (!msg!!.contains("registered with differing handler", ignoreCase = true)) {
           Logger.debug(TAG, "initializeConsent_exception_unhandled: $msg ")
           consentRequest.promise.reject(
             "Receiver Exception",
@@ -172,19 +191,22 @@ class RnAndroidSmsRetrieverModule internal constructor(
         }
       }
     }
-    val client = SmsRetriever.getClient(reactContext)
-    client.startSmsUserConsent(null)
   }
 
-  @SuppressLint("UnspecifiedRegisterReceiverFlag")
-  fun registerReceiver() {
-    val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-    reactContext.registerReceiver(
-      smsVerificationReceiver,
-      intentFilter,
-      SmsRetriever.SEND_PERMISSION,
-      Handler(Looper.getMainLooper())
-    )
+  fun unregisterReceiver() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      try {
+        reactContext.unregisterReceiver(smsVerificationReceiver)
+      } catch (e: Exception) {
+        var msg = e.message
+        Logger.debug(TAG, "initializeConsent_exception_unhandled: $msg ")
+        consentRequest.promise.reject(
+          "Receiver Exception",
+          ConsentError.ReceiverException.code,
+          Throwable(ConsentError.ReceiverException.code),
+        )
+      }
+    }
   }
 
   companion object {

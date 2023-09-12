@@ -12,13 +12,13 @@ export default function App() {
   const [content, setContent] = useState('');
   const [reinitializeVisible, setReinitializeVisible] = useState(false);
 
-  useEffect(() => {
-    startReceiver();
-  }, [activeTab]);
-
   const startReceiver = () => {
     activeTab === Tabs.Otp ? startOtp() : startSms();
   };
+
+  useEffect(() => {
+    startReceiver();
+  }, [activeTab]);
 
   const startOtp = async () => {
     setReinitializeVisible(false);
@@ -29,6 +29,8 @@ export default function App() {
     } catch (e: any) {
       if (e.toString().includes(SMSRetrieverErrors.REGEX_MISMATCH)) {
         startOtp();
+      } else {
+        setReinitializeVisible(true);
       }
     }
   };
@@ -41,6 +43,7 @@ export default function App() {
       setReinitializeVisible(true);
     } catch (e) {
       console.log(e);
+      setReinitializeVisible(true);
     }
   };
 
