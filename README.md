@@ -4,18 +4,44 @@ A react native wrapper for the SMS User Consent API to request user consent to r
 
 ## Installation
 
+NPM:
+
 ```sh
-npm install rn-android-sms-retriever
+npm install rn-dynamic-app-icon
+```
+
+YARN:
+
+```sh
+yarn add rn-dynamic-app-icon
 ```
 
 ## Usage
 
 ```js
-import { multiply } from 'rn-android-sms-retriever';
+import { getOtp, getSms, SMSRetrieverErrors } from 'rn-android-sms-retriever';
 
-// ...
+// Read the next SMS
+const readNextSmsRequest = async () => {
+  try {
+    const sms = await getSms();
+  } catch (e) {
+    if (e.toString().includes(SMSRetrieverErrors.CONSENT_DENIED)) {
+      console.log('User denied SMS read request');
+    }
+  }
+};
 
-const result = await multiply(3, 7);
+// Read OTP from SMS
+const readNextOtpRequest = async (otpLength) => {
+  try {
+    const sms = await getOTP(otpLength); //Can only read numeric OTP values
+  } catch (e) {
+    if (e.toString().includes(SMSRetrieverErrors.REGEX_MISMATCH)) {
+        readNextOtpRequest(otpLength);
+    }
+  }
+};
 ```
 
 ## Contributing
@@ -28,4 +54,4 @@ MIT
 
 ---
 
-Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
+Built by [true-hamid](https://github.com/true-hamid) & [mustfaibra](https://github.com/mustfaibra)

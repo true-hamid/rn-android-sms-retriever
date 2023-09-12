@@ -7,5 +7,8 @@ import com.facebook.react.bridge.Promise
 abstract class RnAndroidSmsRetrieverSpec internal constructor(context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context) {
 
-  abstract fun multiply(a: Double, b: Double, promise: Promise)
+  abstract fun getOtp(otpLength: Int, promise: Promise)
+
+  abstract fun getSms(promise: Promise)
+
 }
