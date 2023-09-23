@@ -7,13 +7,13 @@ A react native wrapper for the SMS User Consent API to request user consent to r
 NPM:
 
 ```sh
-npm install rn-dynamic-app-icon
+npm install rn-android-sms-retriever
 ```
 
 YARN:
 
 ```sh
-yarn add rn-dynamic-app-icon
+yarn add rn-android-sms-retriever
 ```
 
 ## Usage
